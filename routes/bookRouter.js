@@ -1,25 +1,13 @@
 const express = require('express');
 
+const booksController = require('../controllers/booksController');
+
 function routes(Book) {
     const bookRouter = express.Router();
+    const controller = booksController(Book);
     bookRouter.route('/books')
-        .post((req, res) => {
-            const book = new Book(req.body);
-            book.save();
-            return res.status(201).json(book);
-        })
-        .get((req, res) => {
-            const query = {};
-            if (req.query.genre) {
-                query.genre = req.query.genre;
-            }
-            Book.find(query, (err, books) => {
-                if (err) {
-                    return res.send(err);
-                }
-                return res.json(books);
-            });
-        });
+        .post(controller.post)
+        .get(controller.get);
 
     // Defining a middleware only on the route - /books/:bookId
     // next is used by the middleware to signal that its done with 
@@ -38,7 +26,13 @@ function routes(Book) {
     })
 
     bookRouter.route('/books/:bookId')
-        .get((req, res) => res.json(req.book))
+        .get((req, res) => { 
+            const returnBook = req.book.toJSON();
+            const genre = req.book.genre.replace(' ','%20');
+            returnBook.links = {};
+            returnBook.links.FilterByThisGenre = `http://${req.headers.host}/api/books/?genre=${genre}`
+            res.json(returnBook) 
+        })
         .put((req, res) => {
             const { book } = req;
 
